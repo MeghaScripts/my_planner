@@ -1,0 +1,1 @@
+export default {content:['./index.html','./src/**/*.{ts,tsx}'],theme:{extend:{colors:{blush:'#fbeef0',rose:'#e8b4c2',deep:'#c98aa0',mauve:'#8c5a72',cream:'#fff8f3',lav:'#e9dff7',ink:'#4a3340',mint:'#d9f0e3',butter:'#fff2c4',peach:'#ffe0d1'},fontFamily:{sans:['Nunito','system-ui','sans-serif'],serif:['"DM Serif Display"','Georgia','serif']}}},plugins:[]}

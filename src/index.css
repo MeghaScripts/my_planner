@@ -1,0 +1,14 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+body{@apply bg-cream text-ink font-sans}
+.card{@apply bg-white/90 rounded-3xl shadow-[0_4px_18px_rgba(201,138,160,.18)] border border-rose/30 p-4}
+.btn{@apply inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold bg-rose/40 hover:bg-rose/70 text-mauve transition disabled:opacity-40}
+.btn-p{@apply bg-deep text-white hover:bg-mauve}
+.inp{@apply w-full rounded-xl border border-rose/50 bg-blush/60 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-rose}
+.chip{@apply inline-block rounded-full px-2 py-0.5 text-[11px] font-bold}
+h2{@apply font-serif text-2xl text-mauve}
+html{font-size:17px}
+.text-\[10px\]{font-size:.8rem!important}
+.text-\[11px\]{font-size:.88rem!important}
+.text-xs{font-size:.92rem!important}
+.text-sm{font-size:1rem!important}
+body{overflow:hidden}
