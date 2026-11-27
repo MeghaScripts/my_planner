@@ -32,7 +32,7 @@ export const ButterflySVG=({id,a='#f7a8c4',b='#d9c6ff'}:{id:string;a?:string;b?:
 
 /* ---------- the flying layer ---------- */
 type P={x:number;y:number;vx:number;vy:number;life:number;max:number;s:number;c:string;r:number}
-type E={el:HTMLDivElement;x:number;y:number;vx:number;vy:number;tx:number;ty:number;sp:number;ph:number;bob:number;emit:number;size:number;wand:boolean}
+type E={el:HTMLDivElement;x:number;y:number;vx:number;vy:number;tx:number;ty:number;sp:number;ph:number;bob:number;emit:number;size:number;wand:boolean;dead:number}
 
 const FAIRIES=[{dress:'#f7a8c4',hair:'#e9a15a',size:74},{dress:'#b9a4ee',hair:'#8a5a44',size:64},{dress:'#8fd8c0',hair:'#f2d27a',size:58}]
 const BUTTERFLIES=[['#f7a8c4','#ffd9a0'],['#b9a4ee','#bfe6ff'],['#ffd45e','#f7a8c4'],['#8fd8c0','#d9c6ff'],['#f78fb3','#c9b8f0']]
@@ -45,9 +45,10 @@ export default function Fairyland(){
   const small=()=>W<700?.72:1
   const fit=()=>{W=innerWidth;H=innerHeight;const d=Math.min(devicePixelRatio||1,2);canvas.width=W*d;canvas.height=H*d;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0)}
   fit();addEventListener('resize',fit)
+  const zone=()=>{const h=W<700?92:112;return{top:H-h,bot:H-24}}
   const ents:E[]=Array.from(root.querySelectorAll<HTMLDivElement>('[data-fly]')).map((el,i)=>{
    const wand=el.dataset.fly==='fairy',size=+(el.dataset.size||40)
-   return{el,x:rnd(0,W),y:rnd(0,H),vx:rnd(-30,30),vy:rnd(-20,20),tx:rnd(40,W-40),ty:rnd(60,H-60),sp:wand?rnd(70,110):rnd(35,60),ph:rnd(0,6),bob:wand?7:12,emit:0,size,wand}
+   return{el,x:rnd(0,W),y:rnd(zone().top,zone().bot),vx:rnd(-30,30),vy:rnd(-10,10),tx:rnd(40,W-40),ty:rnd(zone().top,zone().bot),dead:0,sp:wand?rnd(70,110):rnd(35,60),ph:rnd(0,6),bob:wand?7:12,emit:0,size,wand}
   })
   const ps:P[]=[]
   const spawn=(x:number,y:number,n=1,cols=DUST,spread=30,size=1)=>{for(let i=0;i<n&&ps.length<420;i++)ps.push({x:x+rnd(-4,4),y:y+rnd(-4,4),vx:rnd(-spread,spread),vy:rnd(-spread,spread*.6)+8,life:0,max:rnd(.7,1.5),s:rnd(3,7)*size,c:pick(cols),r:rnd(0,6.28)})}
@@ -57,22 +58,25 @@ export default function Fairyland(){
   const place=(e:E)=>{const k=small(),s=e.size*k;e.el.style.width=s+'px';e.el.style.height=s*(e.wand?1:.8)+'px'}
   ents.forEach(place)
   const draw=(e:E,dir:number,tilt:number)=>{e.el.style.transform=`translate3d(${e.x-e.size/2}px,${e.y-e.size/2+Math.sin(T*2.3+e.ph)*e.bob}px,0) scaleX(${dir}) rotate(${tilt}deg)`}
-  if(still){ents.forEach((e,i)=>{e.x=W*(.1+((i*.17)%.8));e.y=H*(.15+((i*.29)%.7));draw(e,1,0)});return()=>removeEventListener('resize',fit)}
-  // pointer dust + click burst
-  let lx=0,ly=0
-  const mv=(ev:PointerEvent)=>{const d=Math.hypot(ev.clientX-lx,ev.clientY-ly);if(d>7){spawn(ev.clientX,ev.clientY,2,DUST,22,.8);lx=ev.clientX;ly=ev.clientY}}
-  const ck=(ev:PointerEvent)=>spawn(ev.clientX,ev.clientY,22,[...DUST,...RAINBOW],110,1.1)
-  addEventListener('pointermove',mv);addEventListener('pointerdown',ck)
+  if(still){ents.forEach((e,i)=>{e.x=W*(.1+((i*.17)%.8));e.y=zone().top+((i*.29)%1)*(zone().bot-zone().top);draw(e,1,0)});return()=>removeEventListener('resize',fit)}
+  // butterflies pop into sparkles only when touched, then come back a few seconds later
+  const pops:Array<[HTMLDivElement,()=>void]>=[]
+  ents.filter(e=>!e.wand).forEach(e=>{
+   e.el.style.pointerEvents='auto';e.el.style.cursor='pointer'
+   const pop=()=>{if(e.dead>0)return;spawn(e.x,e.y,34,[...DUST,...RAINBOW],120,1.2);e.dead=rnd(4,7);e.el.style.opacity='0';e.el.style.pointerEvents='none'}
+   e.el.addEventListener('pointerdown',pop);pops.push([e.el,pop])
+  })
   const dirs=new Map<E,number>()
   const tick=(now:number)=>{
    const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt
    for(const e of ents){
+    if(e.dead>0){e.dead-=dt;if(e.dead<=0){e.x=rnd(40,W-40);e.y=rnd(zone().top,zone().bot);e.el.style.opacity='1';e.el.style.pointerEvents='auto'}continue}
     const dx=e.tx-e.x,dy=e.ty-e.y,d=Math.hypot(dx,dy)||1
-    if(d<50||Math.random()<.0015){e.tx=rnd(30,W-30);e.ty=rnd(50,H-50);e.sp=e.wand?rnd(70,115):rnd(35,65)}
-    const wob=e.wand?Math.sin(T*1.6+e.ph)*38:Math.sin(T*3+e.ph)*60
+    if(d<50||Math.random()<.0015){e.tx=rnd(30,W-30);e.ty=rnd(zone().top,zone().bot);e.sp=e.wand?rnd(70,115):rnd(35,65)}
+    const wob=e.wand?Math.sin(T*1.6+e.ph)*20:Math.sin(T*3+e.ph)*28
     const dvx=dx/d*e.sp+(-dy/d)*wob,dvy=dy/d*e.sp+(dx/d)*wob
     e.vx+=(dvx-e.vx)*Math.min(1,dt*1.8);e.vy+=(dvy-e.vy)*Math.min(1,dt*1.8)
-    e.x+=e.vx*dt;e.y+=e.vy*dt
+    e.x+=e.vx*dt;e.y+=e.vy*dt;{const z=zone();if(e.y<z.top){e.y=z.top;e.vy=Math.abs(e.vy)}else if(e.y>z.bot){e.y=z.bot;e.vy=-Math.abs(e.vy)}}
     let dir=dirs.get(e)||1;if(e.vx>14)dir=1;else if(e.vx<-14)dir=-1;dirs.set(e,dir)
     draw(e,dir,Math.max(-14,Math.min(14,e.vy*.12*dir)))
     e.emit+=dt;const gap=e.wand?.028:.16
@@ -82,8 +86,8 @@ export default function Fairyland(){
    const ue=uni.current
    if(ue){
     U.next-=dt
-    if(!U.on&&U.next<=0){U.on=true;U.x=-90;U.base=rnd(H*.15,H*.6);U.t=0}
-    if(U.on){U.t+=dt;U.x+=W/9*dt+90*dt;U.y=U.base+Math.sin(U.t*1.7)*40
+    if(!U.on&&U.next<=0){U.on=true;U.x=-90;U.base=rnd(zone().top+8,zone().bot-52);U.t=0}
+    if(U.on){U.t+=dt;U.x+=W/9*dt+90*dt;U.y=U.base+Math.sin(U.t*1.7)*12
      ue.style.opacity='1';ue.style.transform=`translate3d(${U.x}px,${U.y}px,0) rotate(${Math.cos(U.t*1.7)*-6}deg)`
      spawn(U.x+6,U.y+34,3,RAINBOW,26,1.3)
      if(U.x>W+120){U.on=false;U.next=rnd(35,60);ue.style.opacity='0'}}
@@ -99,7 +103,7 @@ export default function Fairyland(){
   raf=requestAnimationFrame(tick)
   const vis=()=>{if(document.hidden)cancelAnimationFrame(raf);else{last=performance.now();raf=requestAnimationFrame(tick)}}
   document.addEventListener('visibilitychange',vis)
-  return()=>{cancelAnimationFrame(raf);removeEventListener('resize',fit);removeEventListener('pointermove',mv);removeEventListener('pointerdown',ck);document.removeEventListener('visibilitychange',vis)}
+  return()=>{cancelAnimationFrame(raf);removeEventListener('resize',fit);pops.forEach(([el,f])=>el.removeEventListener('pointerdown',f));document.removeEventListener('visibilitychange',vis)}
  },[])
  return(<div ref={wrap} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[45] overflow-hidden">
   <canvas ref={cv} className="absolute inset-0"/>
