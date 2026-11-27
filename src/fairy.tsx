@@ -30,85 +30,53 @@ export const ButterflySVG=({id,a='#f7a8c4',b='#d9c6ff'}:{id:string;a?:string;b?:
  <ellipse cx="20" cy="17" rx="1.6" ry="7" fill="#6b4a5c"/><path d="M19.5 10 Q16 4 13 4 M20.5 10 Q24 4 27 4" stroke="#6b4a5c" strokeWidth=".9" fill="none"/>
 </svg>)
 
-/* ---------- the flying layer ---------- */
+/* ---------- calm layer: 2 fairies stand at the bottom (only wings move), 1 butterfly roams ---------- */
 type P={x:number;y:number;vx:number;vy:number;life:number;max:number;s:number;c:string;r:number}
-type E={el:HTMLDivElement;x:number;y:number;vx:number;vy:number;tx:number;ty:number;sp:number;ph:number;bob:number;emit:number;size:number;wand:boolean;dead:number}
-
-const FAIRIES=[{dress:'#f7a8c4',hair:'#e9a15a',size:74},{dress:'#b9a4ee',hair:'#8a5a44',size:64},{dress:'#8fd8c0',hair:'#f2d27a',size:58}]
-const BUTTERFLIES=[['#f7a8c4','#ffd9a0'],['#b9a4ee','#bfe6ff'],['#ffd45e','#f7a8c4'],['#8fd8c0','#d9c6ff'],['#f78fb3','#c9b8f0']]
+const STAND=[{dress:'#f7a8c4',hair:'#e9a15a',left:'calc(13rem + 14px)'},{dress:'#b9a4ee',hair:'#8a5a44',right:'calc(250px + 2.2rem)'}]
 
 export default function Fairyland(){
- const wrap=useRef<HTMLDivElement>(null),cv=useRef<HTMLCanvasElement>(null),uni=useRef<HTMLDivElement>(null)
+ const cv=useRef<HTMLCanvasElement>(null),bf=useRef<HTMLDivElement>(null)
  useEffect(()=>{
-  const root=wrap.current!,canvas=cv.current!,ctx=canvas.getContext('2d')!,still=matchMedia('(prefers-reduced-motion: reduce)').matches
+  const canvas=cv.current!,ctx=canvas.getContext('2d')!,el=bf.current!,still=matchMedia('(prefers-reduced-motion: reduce)').matches
   let W=innerWidth,H=innerHeight,raf=0,last=performance.now(),T=0
-  const small=()=>W<700?.72:1
   const fit=()=>{W=innerWidth;H=innerHeight;const d=Math.min(devicePixelRatio||1,2);canvas.width=W*d;canvas.height=H*d;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0)}
   fit();addEventListener('resize',fit)
-  const zone=()=>{const h=W<700?92:112;return{top:H-h,bot:H-24}}
-  const ents:E[]=Array.from(root.querySelectorAll<HTMLDivElement>('[data-fly]')).map((el,i)=>{
-   const wand=el.dataset.fly==='fairy',size=+(el.dataset.size||40)
-   return{el,x:rnd(0,W),y:rnd(zone().top,zone().bot),vx:rnd(-30,30),vy:rnd(-10,10),tx:rnd(40,W-40),ty:rnd(zone().top,zone().bot),dead:0,sp:wand?rnd(70,110):rnd(35,60),ph:rnd(0,6),bob:wand?7:12,emit:0,size,wand}
-  })
   const ps:P[]=[]
-  const spawn=(x:number,y:number,n=1,cols=DUST,spread=30,size=1)=>{for(let i=0;i<n&&ps.length<420;i++)ps.push({x:x+rnd(-4,4),y:y+rnd(-4,4),vx:rnd(-spread,spread),vy:rnd(-spread,spread*.6)+8,life:0,max:rnd(.7,1.5),s:rnd(3,7)*size,c:pick(cols),r:rnd(0,6.28)})}
+  const burst=(x:number,y:number)=>{for(let i=0;i<30;i++)ps.push({x,y,vx:rnd(-120,120),vy:rnd(-120,100),life:0,max:rnd(.6,1.2),s:rnd(3,7),c:pick([...DUST,...RAINBOW]),r:rnd(0,6.28)})}
   const star=(x:number,y:number,r:number,rot:number)=>{ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,rr=i%2?r*.28:r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill();ctx.restore()}
-  // unicorn flyby
-  const U={on:false,x:0,y:0,base:0,t:0,next:5}
-  const place=(e:E)=>{const k=small(),s=e.size*k;e.el.style.width=s+'px';e.el.style.height=s*(e.wand?1:.8)+'px'}
-  ents.forEach(place)
-  const draw=(e:E,dir:number,tilt:number)=>{e.el.style.transform=`translate3d(${e.x-e.size/2}px,${e.y-e.size/2+Math.sin(T*2.3+e.ph)*e.bob}px,0) scaleX(${dir}) rotate(${tilt}deg)`}
-  if(still){ents.forEach((e,i)=>{e.x=W*(.1+((i*.17)%.8));e.y=zone().top+((i*.29)%1)*(zone().bot-zone().top);draw(e,1,0)});return()=>removeEventListener('resize',fit)}
-  // butterflies pop into sparkles only when touched, then come back a few seconds later
-  const pops:Array<[HTMLDivElement,()=>void]>=[]
-  ents.filter(e=>!e.wand).forEach(e=>{
-   e.el.style.pointerEvents='auto';e.el.style.cursor='pointer'
-   const pop=()=>{if(e.dead>0)return;spawn(e.x,e.y,34,[...DUST,...RAINBOW],120,1.2);e.dead=rnd(4,7);e.el.style.opacity='0';e.el.style.pointerEvents='none'}
-   e.el.addEventListener('pointerdown',pop);pops.push([e.el,pop])
-  })
-  const dirs=new Map<E,number>()
+  const B={x:rnd(200,W-200),y:rnd(120,H-160),vx:30,vy:10,tx:rnd(60,W-60),ty:rnd(80,H-100),dead:0,dir:1}
+  const SZ=38
+  const place=()=>{el.style.transform=`translate3d(${B.x-SZ/2}px,${B.y-SZ/2}px,0) scaleX(${B.dir})`}
+  place()
+  if(still)return()=>removeEventListener('resize',fit)
+  const pop=()=>{if(B.dead>0)return;burst(B.x,B.y);B.dead=5;el.style.opacity='0';el.style.pointerEvents='none'}
+  el.style.pointerEvents='auto';el.addEventListener('pointerdown',pop)
   const tick=(now:number)=>{
    const dt=Math.min(.05,(now-last)/1000);last=now;T+=dt
-   for(const e of ents){
-    if(e.dead>0){e.dead-=dt;if(e.dead<=0){e.x=rnd(40,W-40);e.y=rnd(zone().top,zone().bot);e.el.style.opacity='1';e.el.style.pointerEvents='auto'}continue}
-    const dx=e.tx-e.x,dy=e.ty-e.y,d=Math.hypot(dx,dy)||1
-    if(d<50||Math.random()<.0015){e.tx=rnd(30,W-30);e.ty=rnd(zone().top,zone().bot);e.sp=e.wand?rnd(70,115):rnd(35,65)}
-    const wob=e.wand?Math.sin(T*1.6+e.ph)*20:Math.sin(T*3+e.ph)*28
-    const dvx=dx/d*e.sp+(-dy/d)*wob,dvy=dy/d*e.sp+(dx/d)*wob
-    e.vx+=(dvx-e.vx)*Math.min(1,dt*1.8);e.vy+=(dvy-e.vy)*Math.min(1,dt*1.8)
-    e.x+=e.vx*dt;e.y+=e.vy*dt;{const z=zone();if(e.y<z.top){e.y=z.top;e.vy=Math.abs(e.vy)}else if(e.y>z.bot){e.y=z.bot;e.vy=-Math.abs(e.vy)}}
-    let dir=dirs.get(e)||1;if(e.vx>14)dir=1;else if(e.vx<-14)dir=-1;dirs.set(e,dir)
-    draw(e,dir,Math.max(-14,Math.min(14,e.vy*.12*dir)))
-    e.emit+=dt;const gap=e.wand?.028:.16
-    if(e.emit>gap){e.emit=0;spawn(e.x-dir*e.size*.3,e.y+e.size*.1,e.wand?2:1,e.wand?DUST:RAINBOW,e.wand?16:8,e.wand?1:.7)}
-   }
-   // unicorn
-   const ue=uni.current
-   if(ue){
-    U.next-=dt
-    if(!U.on&&U.next<=0){U.on=true;U.x=-90;U.base=rnd(zone().top+8,zone().bot-52);U.t=0}
-    if(U.on){U.t+=dt;U.x+=W/9*dt+90*dt;U.y=U.base+Math.sin(U.t*1.7)*12
-     ue.style.opacity='1';ue.style.transform=`translate3d(${U.x}px,${U.y}px,0) rotate(${Math.cos(U.t*1.7)*-6}deg)`
-     spawn(U.x+6,U.y+34,3,RAINBOW,26,1.3)
-     if(U.x>W+120){U.on=false;U.next=rnd(35,60);ue.style.opacity='0'}}
+   if(B.dead>0){B.dead-=dt;if(B.dead<=0){B.x=rnd(60,W-60);B.y=rnd(80,H-100);B.tx=rnd(60,W-60);B.ty=rnd(80,H-100);el.style.opacity='1';el.style.pointerEvents='auto'}}
+   else{
+    const dx=B.tx-B.x,dy=B.ty-B.y,d=Math.hypot(dx,dy)||1
+    if(d<40||Math.random()<.002){B.tx=rnd(60,W-60);B.ty=rnd(80,H-100)}
+    const wob=Math.sin(T*2.4)*45,sp=48
+    B.vx+=((dx/d*sp-dy/d*wob)-B.vx)*Math.min(1,dt*1.6);B.vy+=((dy/d*sp+dx/d*wob)-B.vy)*Math.min(1,dt*1.6)
+    B.x+=B.vx*dt;B.y+=B.vy*dt
+    if(B.vx>12)B.dir=1;else if(B.vx<-12)B.dir=-1
+    el.style.transform=`translate3d(${B.x-SZ/2}px,${B.y-SZ/2+Math.sin(T*3)*5}px,0) scaleX(${B.dir}) rotate(${Math.max(-12,Math.min(12,B.vy*.1*B.dir))}deg)`
    }
    ctx.clearRect(0,0,W,H)
    for(let i=ps.length-1;i>=0;i--){const p=ps[i];p.life+=dt;if(p.life>=p.max){ps.splice(i,1);continue}
-    p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=26*dt;p.vx*=.985;const k=1-p.life/p.max
-    ctx.globalAlpha=Math.min(1,k*1.4)*.95;ctx.fillStyle=p.c
-    star(p.x,p.y,p.s*(.45+k*.55),p.r+p.life*3)
-    ctx.globalAlpha*=.22;ctx.beginPath();ctx.arc(p.x,p.y,p.s*1.2,0,6.28);ctx.fill()}
+    p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=40*dt;p.vx*=.98;const k=1-p.life/p.max
+    ctx.globalAlpha=Math.min(1,k*1.4);ctx.fillStyle=p.c;star(p.x,p.y,p.s*(.45+k*.55),p.r+p.life*3)}
    ctx.globalAlpha=1
    raf=requestAnimationFrame(tick)}
   raf=requestAnimationFrame(tick)
   const vis=()=>{if(document.hidden)cancelAnimationFrame(raf);else{last=performance.now();raf=requestAnimationFrame(tick)}}
   document.addEventListener('visibilitychange',vis)
-  return()=>{cancelAnimationFrame(raf);removeEventListener('resize',fit);pops.forEach(([el,f])=>el.removeEventListener('pointerdown',f));document.removeEventListener('visibilitychange',vis)}
+  return()=>{cancelAnimationFrame(raf);removeEventListener('resize',fit);el.removeEventListener('pointerdown',pop);document.removeEventListener('visibilitychange',vis)}
  },[])
- return(<div ref={wrap} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[45] overflow-hidden">
+ return(<div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[45] overflow-hidden">
   <canvas ref={cv} className="absolute inset-0"/>
-  {FAIRIES.map((f,i)=><div key={'f'+i} data-fly="fairy" data-size={f.size} className="absolute left-0 top-0 will-change-transform drop-shadow-[0_3px_6px_rgba(201,138,160,.45)]"><FairySVG id={'fw'+i} dress={f.dress} hair={f.hair}/></div>)}
-  {BUTTERFLIES.map(([a,b],i)=><div key={'b'+i} data-fly="butterfly" data-size={i%2?32:40} className="absolute left-0 top-0 will-change-transform drop-shadow-[0_2px_4px_rgba(150,110,170,.35)]"><ButterflySVG id={'bw'+i} a={a} b={b}/></div>)}
-  <div ref={uni} className="absolute left-0 top-0 text-5xl opacity-0 will-change-transform select-none" style={{filter:'drop-shadow(0 4px 8px rgba(201,138,160,.45))'}}>🦄</div>
+  {STAND.map((f,i)=><div key={i} className="absolute bottom-0 w-[58px] h-[58px] drop-shadow-[0_3px_6px_rgba(201,138,160,.4)]" style={{left:(f as any).left,right:(f as any).right}}><FairySVG id={'fw'+i} dress={f.dress} hair={f.hair}/></div>)}
+  <div ref={bf} className="absolute left-0 top-0 will-change-transform cursor-pointer drop-shadow-[0_2px_4px_rgba(150,110,170,.35)]" style={{width:38,height:30}}><ButterflySVG id="bw0" a="#f7a8c4" b="#d9c6ff"/></div>
  </div>)
 }
