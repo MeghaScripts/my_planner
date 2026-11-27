@@ -6,9 +6,21 @@ body{@apply bg-cream text-ink font-sans}
 .inp{@apply w-full rounded-xl border border-rose/50 bg-blush/60 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-rose}
 .chip{@apply inline-block rounded-full px-2 py-0.5 text-[11px] font-bold}
 h2{@apply font-serif text-2xl text-mauve}
-html{font-size:17px}
-.text-\[10px\]{font-size:.8rem!important}
-.text-\[11px\]{font-size:.88rem!important}
-.text-xs{font-size:.92rem!important}
-.text-sm{font-size:1rem!important}
 body{overflow:hidden}
+html{font-size:15px}
+.text-\[10px\]{font-size:.72rem!important}
+.text-\[11px\]{font-size:.78rem!important}
+.text-xs{font-size:.82rem!important}
+.text-sm{font-size:.92rem!important}
+body{background:linear-gradient(180deg,#fff3f6 0%,#fdf0f8 50%,#f1ecfb 100%);background-attachment:fixed}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes drift{from{transform:translateX(-20vw)}to{transform:translateX(110vw)}}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:.9;transform:scale(1.25)}}
+@keyframes pagein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.page-in{animation:pagein .5s ease both}
+.float{animation:floaty 5s ease-in-out infinite}
+.twinkle{animation:twinkle 3.2s ease-in-out infinite}
+.card{transition:transform .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(201,138,160,.3)}
+.btn{transition:transform .15s,background .2s}
+.btn:hover{transform:translateY(-1px)}
