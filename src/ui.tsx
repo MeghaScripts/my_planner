@@ -1,7 +1,8 @@
 import React,{useState,useEffect} from 'react'
 import {fmt,parse,iso,addDays,dayState,DAY,START,END,Log,Task,CATS,STATUS,Status,secOf,clock,blankLog,quoteOf,diffDays,streakOf} from './lib'
 import {useApp} from './store'
-import {Play,Pause,Square,NotebookPen} from 'lucide-react'
+import {Play,Pause,Square,NotebookPen,Trash2} from 'lucide-react'
+export const Del=({onClick,label,ask=true}:{onClick:()=>void;label?:string;ask?:boolean})=><button type="button" className="del" title={label||'Delete'} aria-label={label||'Delete'} onClick={()=>{if(!ask||confirm(`${label||'Delete'}? This cannot be undone.`))onClick()}}><Trash2 size={13}/>{label&&<span>{label}</span>}</button>
 export const Banner=()=>(<svg viewBox="0 0 1200 170" preserveAspectRatio="xMidYMid slice" className="w-full h-20 sm:h-28 rounded-3xl"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f9d5de"/><stop offset="1" stopColor="#fdeff2"/></linearGradient></defs><rect width="1200" height="170" fill="url(#sky)"/>
 {[[200,40],[520,25],[900,50],[1100,20],[700,80]].map(([x,y],i)=><text key={i} x={x} y={y} fontSize="18" fill="#fff" className="twinkle" style={{transformBox:'fill-box',transformOrigin:'center',animationDelay:i*.6+'s'}}>✦</text>)}
 <path d="M120 30a38 38 0 1 0 40 62a30 30 0 1 1-40-62z" fill="#f6e3c8" opacity=".9"/>
@@ -32,7 +33,7 @@ export function TaskCard({t,onOpen}:{t:Task;onOpen:()=>void}){const {l,set,start
  {l.run?<><button className="btn" onClick={pause}><Pause size={14}/>Pause</button><button className="btn" onClick={stop}><Square size={14}/>Stop</button></>:<button className="btn" onClick={start}><Play size={14}/>{l.sec?'Resume':'Start'}</button>}
  {!l.run&&l.sec>0&&<button className="btn" onClick={stop}><Square size={14}/>Stop</button>}
  <button className="btn" onClick={onOpen}><NotebookPen size={14}/>Details</button></div></div></div></div>)}
-export function TaskModal({t,onClose}:{t:Task;onClose:()=>void}){const {l,set,sec}=useTask(t)
+export function TaskModal({t,onClose}:{t:Task;onClose:()=>void}){const {l,set,sec}=useTask(t);const {upd}=useApp()
  const F=({k,l:lab,rows=2}:any)=><Field l={lab}><textarea rows={rows} className="inp" value={(l as any)[k]} onChange={e=>set({[k]:e.target.value} as any)}/></Field>
  return(<Modal onClose={onClose}><h2>{CATS[t.cat].label}</h2><p className="text-xs">{fmt(t.date)} · {t.start}–{t.end} · planned {t.mins} min</p>
  <div className="rounded-2xl bg-blush p-3 my-2 text-sm"><b>1. What I planned to study (from the PDF, read-only)</b><div>{t.text}</div></div>
@@ -40,7 +41,7 @@ export function TaskModal({t,onClose}:{t:Task;onClose:()=>void}){const {l,set,se
  <div className="grid sm:grid-cols-3 gap-3 mt-3"><Field l="7. Confidence (1–5)"><select className="inp" value={l.conf} onChange={e=>set({conf:+e.target.value})}>{[0,1,2,3,4,5].map(n=><option key={n} value={n}>{n||'—'}</option>)}</select></Field>
  <Field l={`8. Time spent: timer ${clock(sec)} · override (min)`}><input type="number" min={0} className="inp" value={l.actualMin??''} placeholder={String(Math.round(sec/60))} onChange={e=>set({actualMin:e.target.value===''?undefined:+e.target.value})}/></Field>
  <Field l="Status"><select className="inp" value={l.status} onChange={e=>set({status:e.target.value as Status})}>{Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></Field></div>
- <div className="mt-3"><F k="notes" l="Notes" rows={3}/></div><button className="btn btn-p mt-3" onClick={onClose}>Done</button></Modal>)}
+ <div className="mt-3"><F k="notes" l="Notes" rows={3}/></div><div className="flex flex-wrap items-center gap-2 mt-3"><button className="btn btn-p" onClick={onClose}>Done</button><Del label="Clear my entries for this task" onClick={()=>{upd(d=>{delete d.logs[t.id]})}}/></div></Modal>)}
 export function Widgets(){const {s,upd,today,now}=useApp();const [t,setT]=useState(new Date(now));useEffect(()=>setT(new Date(now)),[now])
  const [m,setM]=useState(today.slice(0,7)),[pom,setPom]=useState({left:1500,run:false,brk:false})
  useEffect(()=>{if(!pom.run)return;const i=setInterval(()=>setPom(p=>p.left<=1?{left:p.brk?1500:300,run:false,brk:!p.brk}:{...p,left:p.left-1}),1000);return()=>clearInterval(i)},[pom.run])
@@ -55,4 +56,4 @@ export function Widgets(){const {s,upd,today,now}=useApp();const [t,setT]=useSta
  <div className="card !p-3"><b className="text-xs text-mauve">TODAY'S FOCUS</b><input className="inp mt-1" placeholder="One thing that matters most…" value={s.focus[view]||''} onChange={e=>upd(d=>{d.focus[view]=e.target.value})}/></div>
  <div className="card !p-3 text-center"><b className="text-xs text-mauve">{pom.brk?'BREAK':'FOCUS'} TIMER</b><div className="text-4xl font-serif">{String(Math.floor(pom.left/60)).padStart(2,'0')}:{String(pom.left%60).padStart(2,'0')}</div><div className="flex gap-2 justify-center mt-1"><button className="btn" onClick={()=>setPom({...pom,run:!pom.run})}>{pom.run?'Pause':'Start'}</button><button className="btn" onClick={()=>setPom({left:1500,run:false,brk:false})}>Reset</button></div></div>
  <div className="grid grid-cols-2 gap-2 text-center"><div className="card !p-3"><div className="text-3xl">🔥{st}</div><div className="text-xs">day streak</div></div><div className="card !p-3"><div className="text-3xl">{Math.max(0,diffDays(today,END))}</div><div className="text-xs">days to 28 Apr 2027</div></div></div>
- <div className="card !p-3"><b className="text-xs text-mauve">MUSIC</b><input className="inp mt-1" placeholder="Paste a Spotify or YouTube playlist link" value={mu} onChange={e=>upd(d=>{d.music=e.target.value})}/>{emb?<iframe className="w-full h-24 mt-2 rounded-xl" src={emb} allow="encrypted-media"/>:mu&&<a className="btn mt-2" href={mu} target="_blank">Open link</a>}</div></div>)}
+ <div className="card !p-3"><b className="text-xs text-mauve">MUSIC</b><input className="inp mt-1" placeholder="Paste a Spotify or YouTube playlist link" value={mu} onChange={e=>upd(d=>{d.music=e.target.value})}/>{mu&&<button className="btn mt-2 mr-2" onClick={()=>upd(d=>{d.music=''})}>Clear</button>}{emb?<iframe className="w-full h-24 mt-2 rounded-xl" src={emb} allow="encrypted-media"/>:mu&&<a className="btn mt-2" href={mu} target="_blank">Open link</a>}</div></div>)}
